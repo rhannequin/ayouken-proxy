@@ -7,6 +7,48 @@ require 'json'
 require 'net/http'
 require 'net/https'
 
+
+class RedirectFollower
+  class TooManyRedirects < StandardError; end
+
+  attr_accessor :url, :body, :redirect_limit, :response
+
+  def initialize(url, api_port, limit = 10)
+    @url, @redirect_limit = url, limit
+    @api_port = api_port
+  end
+
+  def resolve
+    raise TooManyRedirects if redirect_limit < 0
+
+    uri = URI.parse url
+    the_request = Net::HTTP::Get.new uri
+
+    self.response = Net::HTTP.start(uri.host, @api_port) { |http|
+      http.request(the_request)
+    }
+
+    if response.kind_of?(Net::HTTPRedirection)
+      self.url = redirect_url
+      self.redirect_limit -= 1
+
+      resolve
+    end
+
+    self.body = response.body
+    self
+  end
+
+  def redirect_url
+    if response['location'].nil?
+      response.body.match(/<a href=\"([^>]+)\">/i)[1]
+    else
+      response['location']
+    end
+  end
+end
+
+
 class AyoukenProxy < Sinatra::Base
   register Sinatra::CrossOrigin
 
@@ -25,12 +67,14 @@ class AyoukenProxy < Sinatra::Base
 
   configure :development, :test do
     set :logging, Logger::DEBUG
-    set :api_url, 'http//localhost:7000'
+    set :api_url, 'http://10.95.80.70'
+    set :api_port, 7000
     register Sinatra::Reloader
   end
 
   configure :production do
-    set :api_url, 'http//api.ayouken.com'
+    set :api_url, 'http://api.ayouken.com'
+    set :api_port, 80
     set :logging, Logger::INFO
   end
 
@@ -49,11 +93,10 @@ class AyoukenProxy < Sinatra::Base
   end
 
   get '/:command' do
-    url = "#{settings.api_ur}/#{params['command']}"
-    # http = Net::HTTP::Proxy proxy_host, proxy_port, proxy_user, proxy_password
-    http = Net::HTTP
-    result = JSON.parse http.get_response(URI.parse(url)).body
-    json_status result['status'], result['data']
+    url = "#{settings.api_url}:#{settings.api_port}/#{params['command']}"
+    res = RedirectFollower.new(url, settings.api_port).resolve
+    body = JSON.parse res.body
+    json_status body['status'], body['data']
   end
 
 
