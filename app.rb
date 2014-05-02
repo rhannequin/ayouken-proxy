@@ -21,7 +21,7 @@ class RedirectFollower
   def resolve
     raise TooManyRedirects if redirect_limit < 0
 
-    uri = URI.parse url
+    uri = URI.parse URI.encode(url)
     the_request = Net::HTTP::Get.new uri
 
     self.response = Net::HTTP.start(uri.host, @api_port) { |http|
@@ -67,7 +67,7 @@ class AyoukenProxy < Sinatra::Base
 
   configure :development, :test do
     set :logging, Logger::DEBUG
-    set :api_url, 'http://10.95.80.70'
+    set :api_url, 'http://xx.xx.xx.xx'
     set :api_port, 7000
     register Sinatra::Reloader
   end
@@ -90,13 +90,22 @@ class AyoukenProxy < Sinatra::Base
       status code
       jsonp status: code, data: data
     end
+
+    def execute_query(url)
+      res = RedirectFollower.new(url, settings.api_port).resolve
+      body = JSON.parse res.body
+      json_status body['status'], body['data']
+    end
   end
 
   get '/:command' do
-    url = "#{settings.api_url}:#{settings.api_port}/#{params['command']}"
-    res = RedirectFollower.new(url, settings.api_port).resolve
-    body = JSON.parse res.body
-    json_status body['status'], body['data']
+    url = "#{settings.api_url}:#{settings.api_port}/#{params[:command]}"
+    execute_query url
+  end
+
+  get '/:command/:param' do
+    url = "#{settings.api_url}:#{settings.api_port}/#{params[:command]}/#{params[:param]}"
+    execute_query url
   end
 
 
