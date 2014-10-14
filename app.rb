@@ -68,8 +68,8 @@ class AyoukenProxy < Sinatra::Base
 
   configure :development, :test do
     set :logging, Logger::DEBUG
-    set :api_url, 'http://xx.xx.xx.xx'
-    set :api_port, 7000
+    set :api_url, 'http://**.**.**.**'
+    set :api_port, 80
     register Sinatra::Reloader
   end
 
@@ -93,12 +93,15 @@ class AyoukenProxy < Sinatra::Base
     end
 
     def execute_query(url)
+      puts url
       # res = RedirectFollower.new(url, settings.api_port).resolve
       # body = JSON.parse res.body
       # json_status body['status'], body['data']
 
       content_type :json
-      body = open(url, proxy_http_basic_authentication: ['', '', '']).read
+      body = open(url
+        # , proxy_http_basic_authentication: ['', '', '']
+      ).read
       jsonp JSON.parse body
     end
   end
