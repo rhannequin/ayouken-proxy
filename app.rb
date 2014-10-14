@@ -6,6 +6,7 @@ require './sinatra_ssl'
 require 'json'
 require 'net/http'
 require 'net/https'
+require 'open-uri'
 
 
 class RedirectFollower
@@ -92,9 +93,13 @@ class AyoukenProxy < Sinatra::Base
     end
 
     def execute_query(url)
-      res = RedirectFollower.new(url, settings.api_port).resolve
-      body = JSON.parse res.body
-      json_status body['status'], body['data']
+      # res = RedirectFollower.new(url, settings.api_port).resolve
+      # body = JSON.parse res.body
+      # json_status body['status'], body['data']
+
+      content_type :json
+      body = open(url, proxy_http_basic_authentication: ['', '', '']).read
+      jsonp JSON.parse body
     end
   end
 
