@@ -1,5 +1,6 @@
 require 'sinatra/base'
 require 'sinatra/reloader'
+require 'sinatra/config_file'
 require 'sinatra/cross_origin'
 require 'sinatra/jsonp'
 require './sinatra_ssl'
@@ -7,7 +8,6 @@ require 'json'
 require 'net/http'
 require 'net/https'
 require 'open-uri'
-
 
 class RedirectFollower
   class TooManyRedirects < StandardError; end
@@ -51,6 +51,7 @@ end
 
 
 class AyoukenProxy < Sinatra::Base
+  register Sinatra::ConfigFile
   register Sinatra::CrossOrigin
 
   set :method_override, true
@@ -61,6 +62,8 @@ class AyoukenProxy < Sinatra::Base
   set :allow_origin, :any
   set :expose_headers, ['Content-Type']
 
+  config_file 'config.yml'
+
   configure do
     enable :logging
     enable :cross_origin
@@ -68,8 +71,8 @@ class AyoukenProxy < Sinatra::Base
 
   configure :development, :test do
     set :logging, Logger::DEBUG
-    set :api_url, 'http://**.**.**.**'
-    set :api_port, 80
+    set :api_url, settings.api_url
+    set :api_port, settings.api_port
     register Sinatra::Reloader
   end
 
@@ -93,15 +96,20 @@ class AyoukenProxy < Sinatra::Base
     end
 
     def execute_query(url)
-      puts url
       # res = RedirectFollower.new(url, settings.api_port).resolve
       # body = JSON.parse res.body
       # json_status body['status'], body['data']
 
       content_type :json
-      body = open(url
-        # , proxy_http_basic_authentication: ['', '', '']
-      ).read
+      proxy = settings.use_proxy ? {
+        proxy_http_basic_authentication: [
+          "#{settings.proxy_url}:#{settings.proxy_port}",
+          settings.proxy_user,
+          settings.proxy_password
+        ]
+      } : {}
+      puts proxy
+      body = open(url, proxy).read
       jsonp JSON.parse body
     end
   end

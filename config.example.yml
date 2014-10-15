@@ -1,0 +1,7 @@
+api_url: "http://**.**.**.**"
+api_port: 80
+use_proxy: false
+proxy_url: "http://proxy.yourdomain.net"
+proxy_port: 80
+proxy_user: "username"
+proxy_password: "password"

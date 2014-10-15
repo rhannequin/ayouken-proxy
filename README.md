@@ -12,5 +12,6 @@ $ git clone https://github.com/rhannequin/ayouken-proxy.git
 $ cd ayouken-proxy
 $ bundle install
 $ openssl req -new -x509 -nodes -out server.crt -keyout server.key
+$ cp config.example.yml config.yml
 $ bundle exec thin start --ssl --ssl-key-file server.key --ssl-cert-file server.crt
 ```

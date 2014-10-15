@@ -1,4 +1,5 @@
 .idea
+config.yml
 server.crt
 server.csr
 server.key
